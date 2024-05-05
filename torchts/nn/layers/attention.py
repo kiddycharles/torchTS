@@ -6,7 +6,7 @@ from torchts.nn.layers.masking import triangular_causal_mask, prob_mask
 
 
 class FullAttention(nn.Module):
-    def __init__(self, mask_flag=True, scale=None, attention_dropout=0.1, output_attention=False, **kwargs):
+    def __init__(self, mask_flag=True, scale=None, attention_dropout=0.1, output_attention=False):
         super(FullAttention, self).__init__()
         self.mask_flag = mask_flag
         self.scale = scale
