@@ -9,6 +9,7 @@ DATA_DICT = {
     "ETTm2": {"path": "data/ETT/ETTm2.csv", "target": "OT", "frequency": "t"},
     "NVDA": {"path": "data/Stocks/NVDA.csv", "target": "close", "frequency": "h"},
     "AMD": {"path": "data/Stocks/AMD.csv", "target": "close", "frequency": "h"},
+    "^DJI":{"path": "data/Stocks/^DJI.csv", "target": "Adj Close", "frequency": "d"},
 }
 
 

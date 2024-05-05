@@ -1,14 +1,15 @@
 trainer:
-  max_epochs: 50
+  max_epochs: 6
   accelerator: mps
   devices: 1
 data:
-  dataset_name: ^DJI
-  seq_len: 30
-  label_len: 10
-  pred_len: 7
+  dataset_name: ETTh1
+  seq_len: 48
+  label_len: 48
+  pred_len: 24
   variate: m
-  target: Close
+  target: OT
+  frequency: h
 model:
   model:
     class_path: torchts.nn.models.Informer.Informer

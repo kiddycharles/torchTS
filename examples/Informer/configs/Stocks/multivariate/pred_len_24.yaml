@@ -11,9 +11,11 @@ data:
   target: Close
 model:
   model:
-    class_path: torchts.nn.models.Informer.Informer
+    class_path: torchts.nn.models.Linear.DLinear
     init_args:
-      factor: 3
-      mix_attention: TRUE
+      seq_len: 30
+      pred_len: 7
+      individual: TRUE
+      enc_in: 2
   learning_rate: 0.0001
   loss: mse

@@ -5,7 +5,7 @@ import torchmetrics
 from torchts.nn.model import TimeSeriesModel
 
 
-class InformerForecastTask(TimeSeriesModel):
+class TimeSeriesForecastTask(TimeSeriesModel):
     def __init__(
             self,
             model: torch.nn.Module,
@@ -21,7 +21,7 @@ class InformerForecastTask(TimeSeriesModel):
             scaler=None,
             **kwargs
     ):
-        super(InformerForecastTask, self).__init__()
+        super(TimeSeriesForecastTask, self).__init__()
         self.model = model
         self.save_hyperparameters(ignore=["model"])
         metrics = torchmetrics.MetricCollection([torchmetrics.MeanSquaredError(), torchmetrics.MeanAbsoluteError()])
