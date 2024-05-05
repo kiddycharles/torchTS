@@ -1,0 +1,110 @@
+# lightning.pytorch==2.2.3
+seed_everything: 0
+trainer:
+  accelerator: mps
+  strategy: auto
+  devices: 1
+  num_nodes: 1
+  precision: null
+  logger: null
+  callbacks: null
+  fast_dev_run: false
+  max_epochs: 50
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  overfit_batches: 0.0
+  val_check_interval: null
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: null
+  log_every_n_steps: null
+  enable_checkpointing: null
+  enable_progress_bar: null
+  enable_model_summary: null
+  accumulate_grad_batches: 1
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  deterministic: null
+  benchmark: null
+  inference_mode: true
+  use_distributed_sampler: true
+  profiler: null
+  detect_anomaly: false
+  barebones: false
+  plugins: null
+  sync_batchnorm: false
+  reload_dataloaders_every_n_epochs: 0
+  default_root_dir: null
+model:
+  model:
+    class_path: torchts.nn.models.Informer.Informer
+    init_args:
+      out_len: 24
+      factor: 3
+      d_model: 512
+      n_heads: 8
+      num_encoder_layers: 2
+      num_decoder_layers: 1
+      d_ff: 2048
+      dropout: 0.05
+      attention_type: prob
+      frequency: h
+      activation: gelu
+      output_attention: false
+      distil: true
+      mix_attention: true
+  padding: 0
+  loss: mse
+  learning_rate: 0.0001
+  lr_scheduler: exponential
+  inverse_scaling: false
+data:
+  dataset_name: NVDA
+  seq_len: 60
+  label_len: 10
+  pred_len: 7
+  variate: m
+  target: close
+  scale: true
+  time_encoding: timefeature
+  frequency: h
+  batch_size: 32
+  num_workers: 0
+log_path: null
+callbacks:
+  early_stopping:
+    monitor: Val_Loss
+    min_delta: 0.0
+    patience: 3
+    verbose: false
+    mode: min
+    strict: true
+    check_finite: true
+    stopping_threshold: null
+    divergence_threshold: null
+    check_on_train_epoch_end: null
+    log_rank_zero_only: false
+  rich_model_summary:
+    max_depth: 1
+  rich_progress_bar:
+    refresh_rate: 1
+    leave: false
+    theme:
+      description: white
+      progress_bar: '#6206E0'
+      progress_bar_finished: '#6206E0'
+      progress_bar_pulse: '#6206E0'
+      batch_progress: white
+      time: grey54
+      processing_speed: grey70
+      metrics: white
+      metrics_text_delimiter: ' '
+      metrics_format: .3f
+    console_kwargs: null
+  save_test_results_callback:
+    save_path: null

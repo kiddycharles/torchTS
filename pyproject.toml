@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "torchts"
+version = "0.1.1"
+description = "Time series forecasting with PyTorch"
+authors = [
+    "TorchTS Team <torchts@googlegroups.com>"
+]
+license = "MIT"
+readme = "README.md"
+homepage = "https://rose-stl-lab.github.io/torchTS"
+repository = "https://github.com/Rose-STL-Lab/torchTS"
+documentation = "https://rose-stl-lab.github.io/torchTS/docs"
+keywords = ["deep-learning", "machine-learning", "time-series", "pytorch"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+torch = "^1.4"
+pytorch-lightning = "^1.2"
+scipy = "^1.7.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.0.1"
+pytest-cov = "^3.0.0"
+pytest-mock = "^3.7.0"
+pre-commit = "^2.17.0"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^4.4.0"
+asteroid-sphinx-theme = "^0.0.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.flakeheaven]
+exclude = ["*.ipynb"]
+format = "grouped"
+max_complexity = 10
+max_line_length = 88
+show_source = true
+
+[tool.flakeheaven.plugins]
+pycodestyle = ["+*", "-E203", "-E741"]
+pyflakes = ["+*"]
+mccabe = ["+*"]
+flake8-bugbear = ["+*"]
+flake8-comprehensions = ["+*"]

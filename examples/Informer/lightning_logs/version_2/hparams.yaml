@@ -1,0 +1,48 @@
+inverse_scaling: false
+label_len: 48
+learning_rate: 0.0001
+loss: mse
+lr_scheduler: exponential
+padding: 0
+pred_len: 24
+scaler: !!python/object:torchts.utils.data.scalers.StandardScaler
+  _device: !!python/object/apply:torch.device
+  - cpu
+  mean: !!python/object/apply:torch._utils._rebuild_tensor_v2
+  - !!python/object/apply:torch.storage._load_from_bytes
+    - !!binary |
+      gAKKCmz8nEb5IGqoUBkugAJN6QMugAJ9cQAoWBAAAABwcm90b2NvbF92ZXJzaW9ucQFN6QNYDQAA
+      AGxpdHRsZV9lbmRpYW5xAohYCgAAAHR5cGVfc2l6ZXNxA31xBChYBQAAAHNob3J0cQVLAlgDAAAA
+      aW50cQZLBFgEAAAAbG9uZ3EHSwR1dS6AAihYBwAAAHN0b3JhZ2VxAGN0b3JjaApGbG9hdFN0b3Jh
+      Z2UKcQFYDwAAADEwNTU1MzIxNTE4ODYwOHECWAMAAABjcHVxA0sHTnRxBFEugAJdcQBYDwAAADEw
+      NTU1MzIxNTE4ODYwOHEBYS4HAAAAAAAAAPwB/kCyWAFAe42iQAkGPz9lCDJAEdhJP64GiUE=
+  - 0
+  - !!python/tuple
+    - 1
+    - 7
+  - !!python/tuple
+    - 7
+    - 1
+  - false
+  - !!python/object/apply:collections.OrderedDict
+    - []
+  std: !!python/object/apply:torch._utils._rebuild_tensor_v2
+  - !!python/object/apply:torch.storage._load_from_bytes
+    - !!binary |
+      gAKKCmz8nEb5IGqoUBkugAJN6QMugAJ9cQAoWBAAAABwcm90b2NvbF92ZXJzaW9ucQFN6QNYDQAA
+      AGxpdHRsZV9lbmRpYW5xAohYCgAAAHR5cGVfc2l6ZXNxA31xBChYBQAAAHNob3J0cQVLAlgDAAAA
+      aW50cQZLBFgEAAAAbG9uZ3EHSwR1dS6AAihYBwAAAHN0b3JhZ2VxAGN0b3JjaApGbG9hdFN0b3Jh
+      Z2UKcQFYDwAAADEwNTU1MzIxNTE4NjQ5NnECWAMAAABjcHVxA0sHTnRxBFEugAJdcQBYDwAAADEw
+      NTU1MzIxNTE4NjQ5NnEBYS4HAAAAAAAAAAsCukBGxAVA9ZmwQJmT9j/KAoM/MFchP+jSEkE=
+  - 0
+  - !!python/tuple
+    - 1
+    - 7
+  - !!python/tuple
+    - 7
+    - 1
+  - false
+  - !!python/object/apply:collections.OrderedDict
+    - []
+seq_len: 48
+variate: m
