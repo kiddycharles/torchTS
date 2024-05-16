@@ -1,5 +1,10 @@
+import os
+import torchvision
 import torch.nn as nn
 import torch
+from matplotlib import pyplot as plt
+import lightning as pl
+from torchts.nn.model import TimeSeriesModel
 
 
 class ConvLSTMCell(nn.Module):
@@ -57,7 +62,7 @@ class ConvLSTMCell(nn.Module):
 
 class Seq2SeqConvLSTM(nn.Module):
     def __init__(self, nf, in_channel):
-        super(Seq2SeqConvLSTM, self).__init__()
+        super().__init__()
 
         """ 
         Overall Architecture
@@ -100,20 +105,23 @@ class Seq2SeqConvLSTM(nn.Module):
 
         # encoder
         for t in range(seq_len):
-            h_t, c_t = self.encoder_1_convlstm(input_tensor=x[:, t, :, :],
-                                               cur_state=[h_t, c_t])  # we could concat to provide skip conn here
-            h_t2, c_t2 = self.encoder_2_convlstm(input_tensor=h_t,
-                                                 cur_state=[h_t2, c_t2])  # we could concat to provide skip conn here
+            h_t, c_t = self.encoder_layer_1_convlstm(input_tensor=x[:, t, :, :],
+                                                     cur_state=[h_t, c_t])  # we could concat to provide skip conn here
+            h_t2, c_t2 = self.encoder_layer_2_convlstm(input_tensor=h_t,
+                                                       cur_state=[h_t2,
+                                                                  c_t2])  # we could concat to provide skip conn here
 
         # encoder_vector
         encoder_vector = h_t2
 
         # decoder
         for t in range(future_step):
-            h_t3, c_t3 = self.decoder_1_convlstm(input_tensor=encoder_vector,
-                                                 cur_state=[h_t3, c_t3])  # we could concat to provide skip conn here
-            h_t4, c_t4 = self.decoder_2_convlstm(input_tensor=h_t3,
-                                                 cur_state=[h_t4, c_t4])  # we could concat to provide skip conn here
+            h_t3, c_t3 = self.decoder_layer_1_convlstm(input_tensor=encoder_vector,
+                                                       cur_state=[h_t3,
+                                                                  c_t3])  # we could concat to provide skip conn here
+            h_t4, c_t4 = self.decoder_layer_2_convlstm(input_tensor=h_t3,
+                                                       cur_state=[h_t4,
+                                                                  c_t4])  # we could concat to provide skip conn here
             encoder_vector = h_t4
             outputs += [h_t4]  # predictions
 
@@ -139,12 +147,104 @@ class Seq2SeqConvLSTM(nn.Module):
         b, seq_len, _, h, w = x.size()
 
         # initialize hidden states
-        h_t, c_t = self.encoder_1_convlstm.init_hidden(batch_size=b, image_size=(h, w))
-        h_t2, c_t2 = self.encoder_2_convlstm.init_hidden(batch_size=b, image_size=(h, w))
-        h_t3, c_t3 = self.decoder_1_convlstm.init_hidden(batch_size=b, image_size=(h, w))
-        h_t4, c_t4 = self.decoder_2_convlstm.init_hidden(batch_size=b, image_size=(h, w))
+        h_t, c_t = self.encoder_layer_1_convlstm.init_hidden(batch_size=b, image_size=(h, w))
+        h_t2, c_t2 = self.encoder_layer_2_convlstm.init_hidden(batch_size=b, image_size=(h, w))
+        h_t3, c_t3 = self.decoder_layer_1_convlstm.init_hidden(batch_size=b, image_size=(h, w))
+        h_t4, c_t4 = self.decoder_layer_2_convlstm.init_hidden(batch_size=b, image_size=(h, w))
 
         # autoencoder forward
         outputs = self.autoencoder(x, seq_len, future_seq, h_t, c_t, h_t2, c_t2, h_t3, c_t3, h_t4, c_t4)
 
         return outputs
+
+
+def test_end(outputs):
+    # OPTIONAL
+    avg_loss = torch.stack([x['test_loss'] for x in outputs]).mean()
+    tensorboard_logs = {'test_loss': avg_loss}
+    return {'avg_test_loss': avg_loss, 'log': tensorboard_logs}
+
+
+class MovingMNISTConvLSTM(TimeSeriesModel):
+    def __init__(self, opt, model=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.model = model
+        #
+        # logging config
+        self.log_images = True
+        self.opt = opt
+        # Training config
+        self.criterion = torch.nn.MSELoss()
+        self.n_steps_past = opt.n_steps_past
+        self.n_steps_ahead = opt.n_steps_ahead
+
+    def create_video(self, x, y_hat, y):
+        # predictions with input for illustration purposes
+        preds = torch.cat([x.cpu(), y_hat.unsqueeze(2).cpu()], dim=1)[0]
+
+        # entire input and ground truth
+        y_plot = torch.cat([x.cpu(), y.unsqueeze(2).cpu()], dim=1)[0]
+
+        # error (l2 norm) plot between pred and ground truth
+        difference = (torch.pow(y_hat[0] - y[0], 2)).detach().cpu()
+        zeros = torch.zeros(difference.shape)
+        difference_plot = torch.cat([zeros.cpu().unsqueeze(0), difference.unsqueeze(0).cpu()], dim=1)[
+            0].unsqueeze(1)
+
+        # concat all images
+        final_image = torch.cat([preds, y_plot, difference_plot], dim=0)
+
+        # make them into a single grid image file
+        grid = torchvision.utils.make_grid(final_image, nrow=self.n_steps_past + self.n_steps_ahead)
+
+        return grid
+
+    def forward(self, x):
+        x = x.to(device='mps')
+
+        output = self.model(x, future_seq=self.n_steps_ahead)
+
+        return output
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch[:, 0:self.n_steps_past, :, :, :], batch[:, self.n_steps_past:, :, :, :]
+        x = x.permute(0, 1, 4, 2, 3)
+        y = y.squeeze()
+
+        y_hat = self.forward(x).squeeze()  # is squeeze necessary?
+
+        loss = self.criterion(y_hat, y)
+
+        # save learning_rate
+        lr_saved = self.trainer.optimizers[0].param_groups[-1]['lr']
+        lr_saved = torch.scalar_tensor(lr_saved).to(device='mps')
+
+        # save predicted images every 250 global_step
+        if self.log_images:
+            if self.global_step % 250 == 0:
+                final_image = self.create_video(x, y_hat, y)
+
+                self.logger.experiment.add_image(
+                    'epoch_' + str(self.current_epoch) + '_step' + str(self.global_step) + '_generated_images',
+                    final_image, 0)
+                plt.close()
+
+        tensorboard_logs = {'train_mse_loss': loss,
+                            'learning_rate': lr_saved}
+
+        return {'loss': loss, 'log': tensorboard_logs}
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self.forward(x)
+        return {"val_loss": self.criterion(y_hat, y)}
+
+    def test_step(self, batch, batch_idx):
+        # OPTIONAL
+        x, y = batch
+        y_hat = self.forward(x)
+        return {'test_loss': self.criterion(y_hat, y)}
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.opt.lr, betas=(self.opt.beta_1, self.opt.beta_2))
