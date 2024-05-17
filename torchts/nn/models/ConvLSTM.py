@@ -1,9 +1,8 @@
-import os
-import torchvision
-import torch.nn as nn
 import torch
+import torch.nn as nn
+import torchvision
 from matplotlib import pyplot as plt
-import lightning as pl
+
 from torchts.nn.model import TimeSeriesModel
 
 
@@ -201,7 +200,7 @@ class MovingMNISTConvLSTM(TimeSeriesModel):
         return grid
 
     def forward(self, x):
-        x = x.to(device='mps')
+        x = x.to(device='cuda')
 
         output = self.model(x, future_seq=self.n_steps_ahead)
 
@@ -218,7 +217,7 @@ class MovingMNISTConvLSTM(TimeSeriesModel):
 
         # save learning_rate
         lr_saved = self.trainer.optimizers[0].param_groups[-1]['lr']
-        lr_saved = torch.scalar_tensor(lr_saved).to(device='mps')
+        lr_saved = torch.scalar_tensor(lr_saved).to(device='cuda')
 
         # save predicted images every 250 global_step
         if self.log_images:
