@@ -205,7 +205,7 @@ class activation:
             raise NotImplementedError
 
 
-class ED(TimeSeriesModel):
+class EncoderDecoder(TimeSeriesModel):
 
     def __init__(self, encoder, decoder):
         super().__init__()
@@ -216,6 +216,7 @@ class ED(TimeSeriesModel):
         state = self.encoder(input)
         output = self.decoder(state)
         return output
+
 
 
 
