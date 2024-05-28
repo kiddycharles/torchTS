@@ -1,15 +1,38 @@
-from typing import Tuple, Union
+import logging
+from typing import NotRequired, Optional, Tuple, TypedDict, Union
 from enum import Enum
 import torch
 from torch import nn
+from torchts.nn.model import TimeSeriesModel
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class WeightsInitializer(str, Enum):
     Zeros = "zeros"
     He = "he"
     Xavier = "xavier"
+
+
+class ConvLSTMParams(TypedDict):
+    in_channels: int
+    out_channels: int
+    kernel_size: Union[int, Tuple]
+    padding: Union[int, Tuple, str]
+    activation: str
+    frame_size: Tuple[int, int]
+    weights_initializer: NotRequired[WeightsInitializer]
+
+
+class Seq2SeqParams(TypedDict):
+    input_seq_length: int
+    label_seq_length: NotRequired[Optional[int]]
+    num_layers: int
+    num_kernels: int
+    return_sequences: NotRequired[bool]
+    convlstm_params: ConvLSTMParams
 
 
 class BaseConvLSTMCell(nn.Module):
@@ -121,5 +144,192 @@ class BaseConvLSTMCell(nn.Module):
         H = output_gate * self.activation(C)
 
         return H.to(DEVICE), C.to(DEVICE)
+
+
+class ConvLSTM(nn.Module):
+    """The ConvLSTM implementation (Shi et al., 2015)."""
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Union[int, Tuple],
+        padding: Union[int, Tuple, str],
+        activation: str,
+        frame_size: Tuple,
+        weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
+    ) -> None:
+        """
+
+        Args:
+            in_channels (int): input channel.
+            out_channels (int): output channel.
+            kernel_size (Union[int, Tuple]): The size of convolution kernel.
+            padding (Union[int, Tuple, str]): Should be in ['same', 'valid' or (int, int)]
+            activation (str): Name of activation function.
+            frame_size (Tuple): height and width.
+            weights_initializer (Optional[str]): Weight initializers of ['zeros', 'he', 'xavier'].
+        """
+        super().__init__()
+
+        self.ConvLSTMCell = BaseConvLSTMCell(
+            in_channels,
+            out_channels,
+            kernel_size,
+            padding,
+            activation,
+            frame_size,
+            weights_initializer,
+        )
+
+        self.out_channels = out_channels
+
+    def forward(
+            self,
+            X: torch.Tensor,
+            h: Optional[torch.Tensor] = None,
+            cell: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """
+
+        Args:
+            X (torch.Tensor): tensor with the shape of (batch_size, num_channels, seq_len, height, width)
+
+        Returns:
+            torch.Tensor: tensor with the same shape of X
+            :param X:
+            :param cell:
+            :param h:
+        """
+        batch_size, _, seq_len, height, width = X.size()
+
+        # Initialize output
+        output = torch.zeros(
+            (batch_size, self.out_channels, seq_len, height, width)
+        ).to(DEVICE)
+
+        # Initialize hidden state
+        h = torch.zeros((batch_size, self.out_channels, height, width)).to(DEVICE)
+
+        # Initialize cell input
+        cell = torch.zeros((batch_size, self.out_channels, height, width)).to(DEVICE)
+
+        # Unroll over time steps
+        for time_step in range(seq_len):
+            h, cell = self.ConvLSTMCell(X[:, :, time_step], h, cell)
+            output[:, :, time_step] = h  # type: ignore
+
+        return output
+
+
+class Seq2Seq(TimeSeriesModel):
+    """The sequence to sequence model implementation using ConvLSTM."""
+
+    def __init__(
+        self,
+        input_seq_length: int,
+        num_layers: int,
+        num_kernels: int,
+        convlstm_params: ConvLSTMParams,
+        label_seq_length: Optional[int] = None,
+        return_sequences: bool = False,
+    ) -> None:
+        """
+
+        Args:
+            input_seq_length (int): Number of input frames.
+            label_seq_length (Optional[int]): Number of label frames.
+            num_layers (int): Number of ConvLSTM layers.
+            num_kernels (int): Number of kernels.
+            return_sequences (int): If True, the model predict the next frames that is the same length of inputs. If False, the model predicts only one next frame or the frames given by `label_seq_length`.
+        """
+        super().__init__()
+        self.input_seq_length = input_seq_length
+        self.label_seq_length = label_seq_length
+        if label_seq_length is not None and return_sequences is True:
+            logger.warning(
+                "the `label_seq_length` is ignored because `return_sequences` is set to True."
+            )
+        self.num_layers = num_layers
+        self.num_kernels = num_kernels
+        self.return_sequences = return_sequences
+        self.in_channels = convlstm_params["in_channels"]
+        self.kernel_size = convlstm_params["kernel_size"]
+        self.padding = convlstm_params["padding"]
+        self.activation = convlstm_params["activation"]
+        self.frame_size = convlstm_params["frame_size"]
+        self.out_channels = convlstm_params["out_channels"]
+        self.weights_initializer = convlstm_params["weights_initializer"]
+
+        self.sequential = nn.Sequential()
+
+        # Add first layer (Different in_channels than the rest)
+        self.sequential.add_module(
+            "convlstm1",
+            ConvLSTM(
+                in_channels=self.in_channels,
+                out_channels=self.num_kernels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                activation=self.activation,
+                frame_size=self.frame_size,
+                weights_initializer=self.weights_initializer,
+            ),
+        )
+
+        self.sequential.add_module(
+            "layernorm1",
+            nn.LayerNorm([self.num_kernels, self.input_seq_length, *self.frame_size]),
+        )
+
+        # Add the rest of the layers
+        for layer_idx in range(2, self.num_layers + 1):
+            self.sequential.add_module(
+                f"convlstm{layer_idx}",
+                ConvLSTM(
+                    in_channels=self.num_kernels,
+                    out_channels=self.num_kernels,
+                    kernel_size=self.kernel_size,
+                    padding=self.padding,
+                    activation=self.activation,
+                    frame_size=self.frame_size,
+                    weights_initializer=self.weights_initializer,
+                ),
+            )
+
+            self.sequential.add_module(
+                f"layernorm{layer_idx}",
+                nn.LayerNorm(
+                    [self.num_kernels, self.input_seq_length, *self.frame_size]
+                ),
+            )
+
+        self.sequential.add_module(
+            "conv3d",
+            nn.Conv3d(
+                in_channels=self.num_kernels,
+                out_channels=self.out_channels,
+                kernel_size=(3, 3, 3),
+                padding="same",
+            ),
+        )
+
+        self.sequential.add_module("sigmoid", nn.Sigmoid())
+
+    def forward(self, X: torch.Tensor):
+        # Forward propagation through all the layers
+        output = self.sequential(X)
+
+        if self.return_sequences is True:
+            return output
+
+        if self.label_seq_length:
+            return output[:, :, : self.label_seq_length, ...]
+
+        return output[:, :, -1:, ...]
+
+
+
+
 
 
