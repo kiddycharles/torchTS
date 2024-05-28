@@ -5,6 +5,7 @@ from lightning.pytorch.utilities.rank_zero import rank_zero_info
 from torchts.utils.callbacks.save_test_results import SaveTestResultsCallback
 import torchts.utils.logging as logging
 
+
 class CustomLightningCLI(LightningCLI):
     def add_arguments_to_parser(self, parser):
         # global arguments

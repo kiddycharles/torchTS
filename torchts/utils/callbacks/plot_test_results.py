@@ -9,7 +9,7 @@ class PlotTestInstancesCallback(L.Callback):
         self.feature_indices = feature_indices
 
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
-        tensorboard = pl_module.logger.experiment
+        tensorboard = trainer.logger.experiment
         predictions = outputs["outputs"]
         targets = outputs["targets"]
         for i in range(targets.size(0)):
