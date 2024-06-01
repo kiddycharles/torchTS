@@ -1,5 +1,6 @@
 import logging
-from typing import NotRequired, Optional, Tuple, TypedDict, Union
+from typing import Optional, Tuple, TypedDict, Union
+from typing_extensions import NotRequired
 from enum import Enum
 import torch
 from torch import nn
@@ -39,14 +40,14 @@ class BaseConvLSTMCell(nn.Module):
     """The ConvLSTM Cell implementation."""
 
     def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Union[int, Tuple],
-        padding: Union[int, Tuple, str],
-        activation: str,
-        frame_size: Tuple,
-        weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: Union[int, Tuple],
+            padding: Union[int, Tuple, str],
+            activation: str,
+            frame_size: Tuple,
+            weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
     ) -> None:
         """
 
@@ -110,13 +111,13 @@ class BaseConvLSTMCell(nn.Module):
             raise ValueError(f"Invalid weights Initializer: {initializer}")
 
     def forward(
-        self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
+            self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         new_h, new_cell = self.convlstm_cell(X, prev_h, prev_cell)
         return new_h, new_cell
 
     def convlstm_cell(
-        self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
+            self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
     ):
         """ConvLSTM cell calculation.
 
@@ -150,14 +151,14 @@ class ConvLSTM(nn.Module):
     """The ConvLSTM implementation (Shi et al., 2015)."""
 
     def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Union[int, Tuple],
-        padding: Union[int, Tuple, str],
-        activation: str,
-        frame_size: Tuple,
-        weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: Union[int, Tuple],
+            padding: Union[int, Tuple, str],
+            activation: str,
+            frame_size: Tuple,
+            weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
     ) -> None:
         """
 
@@ -226,13 +227,13 @@ class Seq2Seq(TimeSeriesModel):
     """The sequence to sequence model implementation using ConvLSTM."""
 
     def __init__(
-        self,
-        input_seq_length: int,
-        num_layers: int,
-        num_kernels: int,
-        convlstm_params: ConvLSTMParams,
-        label_seq_length: Optional[int] = None,
-        return_sequences: bool = False,
+            self,
+            input_seq_length: int,
+            num_layers: int,
+            num_kernels: int,
+            convlstm_params: ConvLSTMParams,
+            label_seq_length: Optional[int] = None,
+            return_sequences: bool = False,
     ) -> None:
         """
 
@@ -328,8 +329,22 @@ class Seq2Seq(TimeSeriesModel):
 
         return output[:, :, -1:, ...]
 
-
-
-
-
-
+    def training_step(self, batch, batch_idx):
+        # Print the batch to understand its structure
+        x, y = batch
+        output = self(x)
+        loss = self.criterion(output, y)
+        return loss
+    #
+    # def validation_step(self, batch, batch_idx):
+    #     pass
+    #
+    # def test_step(self, batch, batch_idx):
+    #     pass
+    #
+    # def predict_step(self, x):
+    #     pass
+    #
+    # def configure_optimizers(self):
+    #     optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+    #     return optimizer
