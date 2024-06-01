@@ -113,9 +113,6 @@ class BaseConvLSTMCell(nn.Module):
     def forward(
             self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        X = X.to(DEVICE)
-        prev_h = prev_h.to(DEVICE)
-        prev_cell = prev_cell.to(DEVICE)
 
         new_h, new_cell = self.convlstm_cell(X, prev_h, prev_cell)
         return new_h, new_cell
@@ -339,17 +336,22 @@ class Seq2Seq(TimeSeriesModel):
         x, y = batch
         output = self(x)
         loss = self.criterion(output, y)
+        self.log('train_loss', loss, on_step=True, on_epoch=True)
         return loss
     #
-    # def validation_step(self, batch, batch_idx):
-    #     pass
-    #
-    # def test_step(self, batch, batch_idx):
-    #     pass
-    #
-    # def predict_step(self, x):
-    #     pass
-    #
-    # def configure_optimizers(self):
-    #     optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-    #     return optimizer
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        output = self(x)
+        loss = self.criterion(output, y)
+        self.log('val_loss', loss, on_step=True, on_epoch=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        output = self(x)
+        loss = self.criterion(output, y)
+        self.log('test_loss', loss, on_step=True, on_epoch=True)
+        return loss
+
+    def predict_step(self, x):
+        return self(x).detach()

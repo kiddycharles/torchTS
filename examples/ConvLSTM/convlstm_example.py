@@ -9,6 +9,7 @@ import time
 from lightning.pytorch import Trainer
 from lightning.pytorch import loggers as pl_loggers
 import torch
+import matplotlib.pyplot as plt
 
 
 def main():
@@ -63,7 +64,7 @@ def main():
     )
 
     tb_logger = pl_loggers.TensorBoardLogger('logs/')
-    trainer = Trainer(max_epochs=15, logger=tb_logger, accelerator='cpu')
+    trainer = Trainer(max_epochs=100, logger=tb_logger, accelerator='auto')
     start = time.time()
 
     trainer.fit(model, data_loaders.train_dataloader)
@@ -75,6 +76,13 @@ def main():
     trainer.test(model, data_loaders.test_dataloader)
 
     torch.save(model, 'saved_model.pth')
+
+    model.eval()
+    with torch.no_grad():
+        for inputs, target in data_loaders.test_dataloader:
+            output = model(inputs)
+            print(output.shape)
+            print(target.shape)
 
 
 if __name__ == "__main__":
