@@ -1,12 +1,10 @@
 from torchts.nn.models.ConvLSTM import Seq2Seq, Seq2SeqParams, WeightsInitializer
 from torchts.utils.data_loaders.moving_mnist import MovingMNISTDataLoaders
-# from pipelines.experimenter import Experimenter
-# from pipelines.trainer import TrainingParams
-# from pipelines.utils.early_stopping import EarlyStopping
 import time
 from lightning.pytorch import Trainer
 from lightning.pytorch import loggers as pl_loggers
 import torch
+
 
 def main():
     ###
@@ -50,8 +48,6 @@ def main():
     #     "metrics_filename": "metrics.csv",
     # }
 
-
-
     print("Loading dataset ...")
     data_loaders = MovingMNISTDataLoaders(
         train_batch_size=train_batch_size,
@@ -78,4 +74,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
