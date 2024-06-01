@@ -67,7 +67,7 @@ class BaseConvLSTMCell(nn.Module):
             kernel_size=kernel_size,
             padding=padding,
             device=DEVICE,
-        )
+        ).to(DEVICE)
 
         self.W_ci = nn.parameter.Parameter(
             torch.zeros(out_channels, *frame_size, dtype=torch.float)
@@ -116,6 +116,7 @@ class BaseConvLSTMCell(nn.Module):
         X = X.to(DEVICE)
         prev_h = prev_h.to(DEVICE)
         prev_cell = prev_cell.to(DEVICE)
+
         new_h, new_cell = self.convlstm_cell(X, prev_h, prev_cell)
         return new_h, new_cell
 
@@ -132,6 +133,7 @@ class BaseConvLSTMCell(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: (current_hidden_state, current_cell_state)
         """
+        X = X.to(prev_h.device)  # Convert X to the same device as prev_h
         conv_output = self.conv(torch.cat([X, prev_h], dim=1))
 
         i_conv, f_conv, c_conv, o_conv = torch.chunk(conv_output, chunks=4, dim=1)
