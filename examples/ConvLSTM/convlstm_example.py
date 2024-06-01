@@ -1,3 +1,8 @@
+import sys
+
+# Add the directory containing the module to the Python path
+sys.path.append('/home/juy022/torchTS')
+
 from torchts.nn.models.ConvLSTM import Seq2Seq, Seq2SeqParams, WeightsInitializer
 from torchts.utils.data_loaders.moving_mnist import MovingMNISTDataLoaders
 import time

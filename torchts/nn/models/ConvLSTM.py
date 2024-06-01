@@ -113,6 +113,9 @@ class BaseConvLSTMCell(nn.Module):
     def forward(
             self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        X = X.to(DEVICE)
+        prev_h = prev_h.to(DEVICE)
+        prev_cell = prev_cell.to(DEVICE)
         new_h, new_cell = self.convlstm_cell(X, prev_h, prev_cell)
         return new_h, new_cell
 
