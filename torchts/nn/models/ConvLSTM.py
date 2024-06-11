@@ -510,7 +510,7 @@ class SASeq2SeqParams(TypedDict):
     convlstm_params: ConvLSTMParams
 
 
-class SASeq2Seq(nn.Module):
+class SASeq2Seq(TimeSeriesModel):
     """The sequence to sequence model implementation using Base Self-Attention ConvLSTM."""
 
     def __init__(
@@ -833,7 +833,7 @@ class SAMSeq2SeqParams(TypedDict):
     convlstm_params: ConvLSTMParams
 
 
-class SAMSeq2Seq(nn.Module):
+class SAMSeq2Seq(TimeSeriesModel):
     def __init__(
             self,
             attention_hidden_dims: int,

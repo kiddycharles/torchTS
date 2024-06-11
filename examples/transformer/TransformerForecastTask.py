@@ -4,21 +4,22 @@ import torch.optim
 import torchmetrics
 from torchts.nn.model import TimeSeriesModel
 
+
 class TransformerForecastTask(TimeSeriesModel):
     def __init__(
-        self,
-        model: torch.nn.Module,
-        seq_len: int,
-        label_len: int,
-        pred_len: int,
-        variate: str,
-        padding: int = 0,
-        loss: str = "mse",
-        learning_rate: float = 0.0001,
-        lr_scheduler: str = "exponential",
-        inverse_scaling: bool = False,
-        scaler=None,
-        **kwargs
+            self,
+            model: torch.nn.Module,
+            seq_len: int,
+            label_len: int,
+            pred_len: int,
+            variate: str,
+            padding: int = 0,
+            loss: str = "mse",
+            learning_rate: float = 0.0001,
+            lr_scheduler: str = "exponential",
+            inverse_scaling: bool = False,
+            scaler=None,
+            **kwargs
     ):
         super(TransformerForecastTask, self).__init__()
         self.model = model
@@ -43,7 +44,7 @@ class TransformerForecastTask(TimeSeriesModel):
         batch_x, batch_y, batch_x_mark, batch_y_mark = batch
         outputs = self(batch_x, batch_y, batch_x_mark, batch_y_mark)
         f_dim = -1 if self.hparams.variate == "mu" else 0
-        batch_y = batch_y[:, -self.model.pred_len :, f_dim:]
+        batch_y = batch_y[:, -self.model.pred_len:, f_dim:]
         return outputs, batch_y
 
     def training_step(self, batch, batch_idx):
