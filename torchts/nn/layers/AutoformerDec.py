@@ -2,10 +2,12 @@ from torchts.nn.layers.SeriesAnalysis import SeriesDecomposition
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class DecoderLayer(nn.Module):
     """
     Autoformer decoder layer with the progressive decomposition architecture
     """
+
     def __init__(self, self_attention, cross_attention, d_model, c_out, d_ff=None,
                  moving_avg=25, dropout=0.1, activation="relu"):
         super(DecoderLayer, self).__init__()
@@ -47,6 +49,7 @@ class Decoder(nn.Module):
     """
     Autoformer encoder
     """
+
     def __init__(self, layers, norm_layer=None, projection=None):
         super(Decoder, self).__init__()
         self.layers = nn.ModuleList(layers)
