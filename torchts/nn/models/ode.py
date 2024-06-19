@@ -125,13 +125,13 @@ class ODESolver(TimeSeriesModel):
         return torch.stack([pred[var] for var in self.outvar], dim=1)
 
     def fit(self, x, y, max_epochs=10, batch_size=128):
-        """Fits the model to the given data.
+        """Fits the model to the given dataset.
 
         Args:
-            x (torch.Tensor): Input data
-            y (torch.Tensor): Output data
+            x (torch.Tensor): Input dataset
+            y (torch.Tensor): Output dataset
             max_epochs (int): Number of training epochs
-            batch_size (int): Batch size for torch.utils.data.DataLoader
+            batch_size (int): Batch size for torch.utils.dataset.DataLoader
                 Set to x.shape[0] if unobserved variables are present
         """
         if self.observed:

@@ -41,11 +41,11 @@ def generate_ode_dataset(x):
     """Generates dataset for ODESolver when training with zero unobserved variables.
 
     Args:
-        x (torch.Tensor): Original time series data
+        x (torch.Tensor): Original time series dataset
 
     Returns:
-        torch.Tensor: Time series data from time step 0 to n-1
-        torch.Tensor: Time series data from time step 1 to n
+        torch.Tensor: Time series dataset from time step 0 to n-1
+        torch.Tensor: Time series dataset from time step 1 to n
     """
     n = x.shape[0]
     return x[: n - 1], x[1:]
@@ -98,7 +98,7 @@ def load_pickle(pickle_file):
         with open(pickle_file, "rb") as f:
             pickle_data = pickle.load(f, encoding="latin1")
     except Exception as e:
-        print(f"Unable to load data {pickle_file} : {e}")
+        print(f"Unable to load dataset {pickle_file} : {e}")
         raise e
 
     return pickle_data

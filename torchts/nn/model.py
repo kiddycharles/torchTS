@@ -56,13 +56,13 @@ class TimeSeriesModel(L.LightningModule):
         super().__init__()
 
     def fit(self, x, y, max_epochs=10, batch_size=128):
-        """Fits model to the given data.
+        """Fits model to the given dataset.
 
         Args:
-            x (torch.Tensor): Input data
-            y (torch.Tensor): Output data
+            x (torch.Tensor): Input dataset
+            y (torch.Tensor): Output dataset
             max_epochs (int): Number of training epochs
-            batch_size (int): Batch size for torch.utils.data.DataLoader
+            batch_size (int): Batch size for torch.utils.dataset.DataLoader
         """
         dataset = TensorDataset(x, y)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -76,7 +76,7 @@ class TimeSeriesModel(L.LightningModule):
         """
 
         Args:
-            batch: Output of the torch.utils.data.DataLoader
+            batch: Output of the torch.utils.dataset.DataLoader
             batch_idx: Integer displaying index of this batch
             dataset: Data set to use
 
@@ -106,7 +106,7 @@ class TimeSeriesModel(L.LightningModule):
         """Trains model for one step.
 
         Args:
-            batch (torch.Tensor): Output of the torch.utils.data.DataLoader
+            batch (torch.Tensor): Output of the torch.utils.dataset.DataLoader
             batch_idx (int): Integer displaying index of this batch
         """
         train_loss = self._step(batch, batch_idx, len(self.trainer.train_dataloader))
@@ -124,7 +124,7 @@ class TimeSeriesModel(L.LightningModule):
         """Validates model for one step.
 
         Args:
-            batch (torch.Tensor): Output of the torch.utils.data.DataLoader
+            batch (torch.Tensor): Output of the torch.utils.dataset.DataLoader
             batch_idx (int): Integer displaying index of this batch
         """
         val_loss = self._step(batch, batch_idx, 0)
@@ -135,7 +135,7 @@ class TimeSeriesModel(L.LightningModule):
         """Tests model for one step.
 
         Args:
-            batch (torch.Tensor): Output of the torch.utils.data.DataLoader
+            batch (torch.Tensor): Output of the torch.utils.dataset.DataLoader
             batch_idx (int): Integer displaying index of this batch
         """
         test_loss = self._step(batch, batch_idx, 0)
@@ -148,20 +148,20 @@ class TimeSeriesModel(L.LightningModule):
         """Forward pass.
 
         Args:
-            x (torch.Tensor): Input data
+            x (torch.Tensor): Input dataset
 
         Returns:
-            torch.Tensor: Predicted data
+            torch.Tensor: Predicted dataset
         """
 
     def predict(self, x):
         """Runs model inference.
 
         Args:
-            x (torch.Tensor): Input data
+            x (torch.Tensor): Input dataset
 
         Returns:
-            torch.Tensor: Predicted data
+            torch.Tensor: Predicted dataset
         """
         return self(x).detach()
 

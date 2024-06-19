@@ -123,7 +123,7 @@ class BaseConvLSTMCell(nn.Module):
         """ConvLSTM cell calculation.
 
         Args:
-            X (torch.Tensor): input data.
+            X (torch.Tensor): input dataset.
             h_prev (torch.Tensor): previous hidden state.
             c_prev (torch.Tensor): previous cell state.
 
@@ -358,275 +358,6 @@ class Seq2Seq(TimeSeriesModel):
         return self(x).detach()
 
 
-class SelfAttention(nn.Module):
-    """Self-Attention module implementation."""
-
-    def __init__(self, input_dim: int, hidden_dim: int) -> None:
-        super().__init__()
-        self.query_h = nn.Conv2d(
-            input_dim, hidden_dim, 1, padding="same", device=DEVICE
-        )
-        self.key_h = nn.Conv2d(input_dim, hidden_dim, 1, padding="same", device=DEVICE)
-        self.value_h = nn.Conv2d(input_dim, input_dim, 1, padding="same", device=DEVICE)
-        self.z = nn.Conv2d(input_dim, input_dim, 1, padding="same", device=DEVICE)
-
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-
-    def forward(self, h) -> Tuple:
-        batch_size, _, H, W = h.shape
-        k_h = self.key_h(h)
-        q_h = self.query_h(h)
-        v_h = self.value_h(h)
-
-        k_h = k_h.view(batch_size, self.hidden_dim, H * W)
-        q_h = q_h.view(batch_size, self.hidden_dim, H * W).transpose(1, 2)
-        v_h = v_h.view(batch_size, self.input_dim, H * W)
-
-        attention = torch.softmax(
-            torch.bmm(q_h, k_h), dim=-1
-        )  # the shape is (batch_size, H*W, H*W)
-
-        new_h = torch.matmul(attention, v_h.permute(0, 2, 1))
-        new_h = new_h.transpose(1, 2).view(batch_size, self.input_dim, H, W)
-        new_h = self.z(new_h)
-
-        return new_h, attention
-
-
-class SAConvLSTMCell(nn.Module):
-    """Base Self-Attention ConvLSTM cell implementation (Lin et al., 2020)."""
-
-    def __init__(
-            self,
-            attention_hidden_dims: int,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: Union[int, Tuple],
-            padding: Union[int, Tuple, str],
-            activation: str,
-            frame_size: Tuple,
-            weights_initializer: WeightsInitializer = WeightsInitializer.Zeros,
-    ) -> None:
-        super().__init__()
-        self.convlstm_cell = BaseConvLSTMCell(
-            in_channels,
-            out_channels,
-            kernel_size,
-            padding,
-            activation,
-            frame_size,
-            weights_initializer,
-        )
-        self.attention_x = SelfAttention(in_channels, attention_hidden_dims)
-        self.attention_h = SelfAttention(out_channels, attention_hidden_dims)
-
-    def forward(
-            self, X: torch.Tensor, prev_h: torch.Tensor, prev_cell: torch.Tensor
-    ) -> Tuple:
-        X, _ = self.attention_x(X)
-        new_h, new_cell = self.convlstm_cell(X, prev_h, prev_cell)
-        new_h, attention = self.attention_h(new_h)
-        new_h += new_h
-        return new_h, new_cell, attention
-
-
-class SAConvLSTMParams(TypedDict):
-    attention_hidden_dims: int
-    convlstm_params: ConvLSTMParams
-
-
-class SAConvLSTM(nn.Module):
-    """Base Self-Attention ConvLSTM implementation (Lin et al., 2020)."""
-
-    def __init__(
-            self, attention_hidden_dims: int, convlstm_params: ConvLSTMParams
-    ) -> None:
-        super().__init__()
-        self.attention_hidden_dims = attention_hidden_dims
-        self.in_channels = convlstm_params["in_channels"]
-        self.kernel_size = convlstm_params["kernel_size"]
-        self.padding = convlstm_params["padding"]
-        self.activation = convlstm_params["activation"]
-        self.frame_size = convlstm_params["frame_size"]
-        self.out_channels = convlstm_params["out_channels"]
-        self.weights_initializer = convlstm_params["weights_initializer"]
-
-        self.sa_convlstm_cell = SAConvLSTMCell(
-            attention_hidden_dims=attention_hidden_dims, **convlstm_params
-        )
-
-        self._attention_scores: Optional[torch.Tensor] = None
-
-    @property
-    def attention_scores(self) -> Optional[torch.Tensor]:
-        return self._attention_scores
-
-    def forward(
-            self,
-            X: torch.Tensor,
-            h: Optional[torch.Tensor] = None,
-            cell: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        batch_size, _, seq_len, height, width = X.size()
-
-        # NOTE: Cannot store all attention scores because of memory. So only store attention map of the center.
-        # And the same attention score are applied to each channels.
-        self._attention_scores = torch.zeros(
-            (batch_size, seq_len, height * width), device=DEVICE
-        )
-
-        if h is None:
-            h = torch.zeros(
-                (batch_size, self.out_channels, height, width), device=DEVICE
-            )
-
-        if cell is None:
-            cell = torch.zeros(
-                (batch_size, self.out_channels, height, width), device=DEVICE
-            )
-
-        output = torch.zeros(
-            (batch_size, self.out_channels, seq_len, height, width), device=DEVICE
-        )
-
-        for time_step in range(seq_len):
-            h, cell, attention = self.sa_convlstm_cell(X[:, :, time_step], h, cell)
-
-            output[:, :, time_step] = h  # type: ignore
-            self._attention_scores[:, time_step] = attention[
-                                                   :, attention.size(0) // 2
-                                                   ]  # attention shape is (batch_size, height*width, height*width)
-
-        return output
-
-
-class SASeq2SeqParams(TypedDict):
-    attention_hidden_dims: int
-    input_seq_length: int
-    num_layers: int
-    num_kernels: int
-    return_sequences: NotRequired[bool]
-    convlstm_params: ConvLSTMParams
-
-
-class SASeq2Seq(TimeSeriesModel):
-    """The sequence to sequence model implementation using Base Self-Attention ConvLSTM."""
-
-    def __init__(
-            self,
-            attention_hidden_dims: int,
-            input_seq_length: int,
-            num_layers: int,
-            num_kernels: int,
-            convlstm_params: ConvLSTMParams,
-            return_sequences: bool = False,
-    ) -> None:
-        """
-
-        Args:
-            attention_hidden_dims (int): Number of attention hidden layers.
-            input_seq_length (int): Number of input frames.
-            num_layers (int): Number of ConvLSTM layers.
-            num_kernels (int): Number of kernels.
-            return_sequences (int): If True, the model predict the next frames that is the same length of inputs. If False, the model predicts only one next frame.
-            convlstm_params (ConvLSTMParams): Parameters for ConvLSTM module.
-        """
-        super().__init__()
-        self.attention_hidden_dims = attention_hidden_dims
-        self.input_seq_length = input_seq_length
-        self.num_layers = num_layers
-        self.num_kernels = num_kernels
-        self.return_sequences = return_sequences
-        self.in_channels = convlstm_params["in_channels"]
-        self.kernel_size = convlstm_params["kernel_size"]
-        self.padding = convlstm_params["padding"]
-        self.activation = convlstm_params["activation"]
-        self.frame_size = convlstm_params["frame_size"]
-        self.out_channels = convlstm_params["out_channels"]
-        self.weights_initializer = convlstm_params["weights_initializer"]
-        self.sequential = nn.Sequential()
-
-        # Add first layer (Different in_channels than the rest)
-        self.sequential.add_module(
-            "sa_convlstm1",
-            SAConvLSTM(
-                attention_hidden_dims=self.attention_hidden_dims,
-                convlstm_params={
-                    "in_channels": self.in_channels,
-                    "out_channels": self.num_kernels,
-                    "kernel_size": self.kernel_size,
-                    "padding": self.padding,
-                    "activation": self.activation,
-                    "frame_size": self.frame_size,
-                    "weights_initializer": self.weights_initializer,
-                },
-            ),
-        )
-
-        self.sequential.add_module(
-            "layernorm1",
-            nn.LayerNorm([self.num_kernels, self.input_seq_length, *self.frame_size]),
-        )
-
-        # Add the rest of the layers
-        for layer_idx in range(2, self.num_layers + 1):
-            self.sequential.add_module(
-                f"sa_convlstm{layer_idx}",
-                SAConvLSTM(
-                    attention_hidden_dims=self.attention_hidden_dims,
-                    convlstm_params={
-                        "in_channels": self.num_kernels,
-                        "out_channels": self.num_kernels,
-                        "kernel_size": self.kernel_size,
-                        "padding": self.padding,
-                        "activation": self.activation,
-                        "frame_size": self.frame_size,
-                        "weights_initializer": self.weights_initializer,
-                    },
-                ),
-            )
-
-            self.sequential.add_module(
-                f"layernorm{layer_idx}",
-                nn.LayerNorm(
-                    [self.num_kernels, self.input_seq_length, *self.frame_size]
-                ),
-            )
-
-        self.sequential.add_module(
-            "conv3d",
-            nn.Conv3d(
-                in_channels=self.num_kernels,
-                out_channels=self.out_channels,
-                kernel_size=(3, 3, 3),
-                padding="same",
-            ),
-        )
-
-        self.sequential.add_module("sigmoid", nn.Sigmoid())
-
-    def forward(self, X: torch.Tensor):
-        # Forward propagation through all the layers
-        output = self.sequential(X)
-
-        if self.return_sequences is True:
-            return output
-
-        return output[:, :, -1:, ...]
-
-    def get_attention_maps(self):
-        # get all sa_convlstm module
-        sa_convlstm_modules = [
-            (name, module)
-            for name, module in self.named_modules()
-            if module.__class__.__name__ == "SAConvLSTM"
-        ]
-        return {
-            name: module.attention_scores for name, module in sa_convlstm_modules
-        }  # attention scores shape is (batch_size, seq_length, height * width)
-
-
 class SelfAttentionMemory(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int) -> None:
         super().__init__()
@@ -642,10 +373,10 @@ class SelfAttentionMemory(nn.Module):
         self.value_m = nn.Conv2d(input_dim, input_dim, 1, padding="same")
         self.z_m = nn.Conv2d(input_dim, input_dim, 1, padding="same")
 
-        # weights of concated channels of h Zh and Zm.
+        # weights of concat channels of h Zh and Zm.
         self.w_z = nn.Conv2d(input_dim * 2, input_dim * 2, 1, padding="same")
 
-        # weights of conated channels of Z and h.
+        # weights of concat channels of Z and h.
         self.w = nn.Conv2d(input_dim * 3, input_dim * 3, 1, padding="same")
 
         self.input_dim = input_dim
@@ -673,7 +404,7 @@ class SelfAttentionMemory(nn.Module):
         z_h = z_h.transpose(1, 2).view(batch_size, self.input_dim, H, W)
         z_h = self.z_h(z_h)
 
-        # memotry attention
+        # memory attention
         k_m = self.key_m(m)
         v_m = self.value_m(m)
 
@@ -784,7 +515,7 @@ class SAMConvLSTM(nn.Module):
         batch_size, _, seq_len, height, width = X.size()
 
         # NOTE: Cannot store all attention scores because of memory. So only store attention map of the center.
-        # And the same attention score are applied to each channels.
+        # And the same attention score are applied to each channel.
         self._attention_scores = torch.zeros(
             (batch_size, seq_len, height * width), device=DEVICE
         )
