@@ -36,7 +36,7 @@ class Exp_Main(object):
     def _build_model(self):
         model_dict = {
             'Autoformer': Autoformer,
-            'Transformers': Transformer,
+            'LongSequenceTimeForecasting': Transformer,
             'Informer': Informer,
             'DLinear': DLinear,
             'NLinear': NLinear,

@@ -5,12 +5,11 @@ from torchts.nn.layers.Embed import DataEmbedding, DataEmbedding_wo_pos, DataEmb
     DataEmbedding_wo_pos_temp
 from torchts.nn.layers.SelfAttention_Family import FullAttention, AttentionLayer
 from torchts.nn.layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer
-from torchts.nn.model import TimeSeriesModel
 
 
 class Model(nn.Module):
     """
-    Vanilla Transformers with O(L^2) complexity
+    Vanilla LongSequenceTimeForecasting with O(L^2) complexity
     """
     def __init__(self, configs):
         super(Model, self).__init__()

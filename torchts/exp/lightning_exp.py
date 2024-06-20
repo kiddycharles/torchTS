@@ -28,7 +28,7 @@ class LightningExpMain(L.LightningModule):
     def _build_model(self):
         model_dict = {
             'Autoformer': Autoformer,
-            'Transformers': Transformer,
+            'LongSequenceTimeForecasting': Transformer,
             'Informer': Informer,
             'Reformer': Reformer,
             'DLinear': DLinear,
