@@ -9,7 +9,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 from torchts.data_provider.data_factory import data_provider
-from torchts.nn.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, iTransformer
+from torchts.nn.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, iTransformer, Reformer
 from torchts.utils.tools import visual
 
 warnings.filterwarnings('ignore')
@@ -30,6 +30,7 @@ class LightningExpMain(L.LightningModule):
             'Autoformer': Autoformer,
             'Transformers': Transformer,
             'Informer': Informer,
+            'Reformer': Reformer,
             'DLinear': DLinear,
             'NLinear': NLinear,
             'Linear': Linear,

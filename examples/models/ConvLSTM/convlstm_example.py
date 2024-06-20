@@ -4,12 +4,11 @@ import sys
 sys.path.append('/home/juy022/torchTS')
 
 from torchts.nn.models.ConvLSTM import Seq2Seq, Seq2SeqParams, WeightsInitializer
-from torchts.utils..moving_mnist import MovingMNISTDataLoaders
+from torchts.utils.moving_mnist import MovingMNISTDataLoaders
 import time
 from lightning.pytorch import Trainer
 from lightning.pytorch import loggers as pl_loggers
 import torch
-import matplotlib.pyplot as plt
 
 
 def main():
