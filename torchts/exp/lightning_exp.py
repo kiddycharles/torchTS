@@ -1,16 +1,15 @@
 import os
-import time
 import warnings
+
+import lightning as L
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
-import lightning as L
 from torch import optim
 from torch.utils.data import DataLoader
+
 from torchts.data_provider.data_factory import data_provider
 from torchts.nn.models import Informer, Autoformer, Transformer, DLinear, Linear, NLinear, iTransformer
-from torchts.utils.metrics import metric
 from torchts.utils.tools import visual
 
 warnings.filterwarnings('ignore')
@@ -202,4 +201,3 @@ class LightningExpMain(L.LightningModule):
     def predict_dataloader(self):
         pred_data, pred_loader = self._get_data(flag='pred')
         return pred_loader
-
